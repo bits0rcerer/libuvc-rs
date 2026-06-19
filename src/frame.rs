@@ -14,6 +14,18 @@ pub struct Frame {
     frame: NonNull<uvc_frame>,
 }
 
+/// Frame timing information
+pub struct FrameTimings {
+    #[doc = "Estimate of system time when the device started capturing the image"]
+    pub capture_time: timeval,
+    #[doc = "Estimate of system time when the device finished receiving the image"]
+    pub capture_time_finished: timespec,
+    #[doc = "Estimate of CLOCK_BOOTTIME when the device finished receiving the image (in ns)"]
+    pub capture_boottime_finished: u64,
+    #[doc = "Estimate of CLOCK_REALTIME when the device finished receiving the image (in ns)"]
+    pub capture_realtime_finished: u64,
+}
+
 impl Frame {
     pub(crate) unsafe fn from_raw(frame: *mut uvc_frame) -> Frame {
         Frame {
@@ -23,10 +35,21 @@ impl Frame {
 
     /// Does not initialize any data
     unsafe fn new_with_dimensions(width: u32, height: u32, components: u32) -> Self {
-        let frame = uvc_allocate_frame((width * height * components) as _);
+        let frame = unsafe { uvc_allocate_frame((width * height * components) as _) };
 
         Frame {
             frame: NonNull::new(frame).unwrap(),
+        }
+    }
+
+    /// Read frame timing information
+    pub fn timing(&self) -> FrameTimings {
+        let frame = unsafe { self.frame.as_ref() };
+        FrameTimings {
+            capture_time: frame.capture_time,
+            capture_time_finished: frame.capture_time_finished,
+            capture_boottime_finished: frame.capture_boottime_finished,
+            capture_realtime_finished: frame.capture_realtime_finished,
         }
     }
 
